@@ -1,6 +1,6 @@
 # Cobitis ESP32
 
-[![Rust](https://github.com/AkiraMiyakoda/cobitis-esp32c3/actions/workflows/rust.yml/badge.svg)](https://github.com/AkiraMiyakoda/cobitis-esp32c3/actions/workflows/rust.yml)
+[![Rust](https://github.com/AkiraMiyakoda/cobitis-esp32c3/actions/workflows/rust_ci.yml/badge.svg)](https://github.com/AkiraMiyakoda/cobitis-esp32c3/actions/workflows/rust_ci.yml)
 
 [XIAO ESP32C3](https://wiki.seeedstudio.com/XIAO_ESP32C3_Getting_Started/) based aquarium tank monitor
 
