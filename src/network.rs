@@ -17,7 +17,7 @@ use esp_idf_svc::{
     wifi::{ClientConfiguration, Configuration as WifiConfiguration, EspWifi},
 };
 use futures::executor;
-use log::{error, info};
+use log::error;
 use serde::Serialize;
 use tokio::{
     sync::RwLock,
@@ -105,23 +105,7 @@ pub(crate) async fn get() -> Option<Status> {
     *STATUS.read().await
 }
 
-pub(crate) async fn worker(modem: Modem, event_loop: EspSystemEventLoop) -> anyhow::Result<()> {
-    let mut ctx = init(modem, event_loop).await?;
-    info!("Worker initialized");
-
-    let mut interval = interval(Duration::from_secs(5));
-    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
-    loop {
-        interval.tick().await;
-
-        if let Err(e) = update(&mut ctx).await {
-            error!("Failed to update status: {e:?}");
-        }
-    }
-}
-
-async fn init<'a>(modem: Modem, event_loop: EspSystemEventLoop) -> anyhow::Result<Box<Context<'a>>> {
+pub(crate) fn init<'a>(modem: Modem, event_loop: EspSystemEventLoop) -> anyhow::Result<Box<Context<'a>>> {
     task::block_in_place(move || {
         let wifi = init_wifi(modem, event_loop)?;
         let ntp = init_ntp()?;
@@ -141,7 +125,6 @@ fn init_wifi<'a>(modem: Modem, event_loop: EspSystemEventLoop) -> anyhow::Result
         password: psk.as_str().try_into().map_err(|e| anyhow!("{e:?}"))?,
         ..Default::default()
     }))?;
-
     wifi.start()?;
     connect_and_wait(&mut wifi)?;
 
@@ -205,6 +188,18 @@ fn init_http_server() -> anyhow::Result<EspHttpServer<'static>> {
     })?;
 
     Ok(server)
+}
+pub(crate) async fn worker(ctx: &mut Box<Context<'_>>) -> anyhow::Result<()> {
+    let mut interval = interval(Duration::from_secs(5));
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+    loop {
+        interval.tick().await;
+
+        if let Err(e) = update(ctx).await {
+            error!("Failed to update status: {e:?}");
+        }
+    }
 }
 
 async fn update<'a>(ctx: &mut Context<'a>) -> anyhow::Result<()> {

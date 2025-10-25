@@ -14,7 +14,7 @@ use esp_idf_svc::hal::{
     gpio::GpioError,
     i2c::I2cError,
 };
-use log::{error, info};
+use log::error;
 use tokio::{
     sync::RwLock,
     task,
@@ -30,7 +30,7 @@ pub(crate) struct Values {
     pub tds: f32,
 }
 
-struct Context<PIN, I2C>
+pub(crate) struct Context<PIN, I2C>
 where
     PIN: InputPin<Error = GpioError> + OutputPin<Error = GpioError>,
     I2C: embedded_hal::i2c::I2c<Error = I2cError>,
@@ -48,27 +48,7 @@ pub(crate) async fn get() -> Option<Values> {
     *VALUES.read().await
 }
 
-pub(crate) async fn worker<PIN, I2C>(one_wire_pin: PIN, i2c: I2C) -> anyhow::Result<()>
-where
-    PIN: InputPin<Error = GpioError> + OutputPin<Error = GpioError>,
-    I2C: embedded_hal::i2c::I2c<Error = I2cError>,
-{
-    let mut ctx = init(one_wire_pin, i2c).await?;
-    info!("Worker initialized");
-
-    let mut interval = interval(Duration::from_secs(5));
-    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
-    loop {
-        interval.tick().await;
-
-        if let Err(e) = update(&mut ctx).await {
-            error!("Failed to update measurements: {e:?}");
-        }
-    }
-}
-
-async fn init<PIN, I2C>(one_wire_pin: PIN, i2c: I2C) -> anyhow::Result<Box<Context<PIN, I2C>>>
+pub(crate) fn init<PIN, I2C>(one_wire_pin: PIN, i2c: I2C) -> anyhow::Result<Box<Context<PIN, I2C>>>
 where
     PIN: InputPin<Error = GpioError> + OutputPin<Error = GpioError>,
     I2C: embedded_hal::i2c::I2c<Error = I2cError>,
@@ -121,6 +101,23 @@ where
     ads1115.set_full_scale_range(FullScaleRange::Within4_096V).unwrap();
 
     Ok(ads1115)
+}
+
+pub(crate) async fn worker<PIN, I2C>(ctx: &mut Box<Context<PIN, I2C>>) -> anyhow::Result<()>
+where
+    PIN: InputPin<Error = GpioError> + OutputPin<Error = GpioError>,
+    I2C: embedded_hal::i2c::I2c<Error = I2cError>,
+{
+    let mut interval = interval(Duration::from_secs(5));
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+    loop {
+        interval.tick().await;
+
+        if let Err(e) = update(ctx).await {
+            error!("Failed to update measurements: {e:?}");
+        }
+    }
 }
 
 async fn update<PIN, I2C>(ctx: &mut Context<PIN, I2C>) -> anyhow::Result<()>

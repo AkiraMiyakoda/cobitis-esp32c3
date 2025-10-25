@@ -19,7 +19,6 @@ use embedded_graphics::{
 };
 use esp_idf_svc::hal::i2c::I2cError;
 use log::error;
-use log::info;
 use sh1106::{mode::GraphicsMode, prelude::*};
 use tokio::time::MissedTickBehavior;
 use tokio::{task, time::interval};
@@ -61,25 +60,6 @@ where
     timezone: Tz,
 }
 
-pub(crate) async fn worker<I2C>(i2c: I2C) -> anyhow::Result<()>
-where
-    I2C: embedded_hal::i2c::I2c<Error = I2cError>,
-{
-    let mut ctx = init(i2c)?;
-    info!("Worker initialized");
-
-    let mut interval = interval(Duration::from_secs(1));
-    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
-    loop {
-        interval.tick().await;
-
-        if let Err(e) = draw(&mut ctx).await {
-            error!("Failed to draw: {e:?}");
-        }
-    }
-}
-
 pub(crate) fn init<I2C>(i2c: I2C) -> anyhow::Result<Box<Context<I2C>>>
 where
     I2C: embedded_hal::i2c::I2c<Error = I2cError>,
@@ -95,6 +75,40 @@ where
 
         Ok(Box::new(Context { graphics, timezone }))
     })
+}
+
+pub(crate) async fn greet<I2C>(ctx: &mut Box<Context<I2C>>) -> anyhow::Result<()>
+where
+    I2C: embedded_hal::i2c::I2c<Error = I2cError>,
+{
+    task::block_in_place(move || {
+        let graphics = &mut ctx.graphics;
+
+        graphics.clear();
+
+        Text::with_baseline("Cobitis v1.2", Point::new(16, 18), STYLE_TER_14, Baseline::Top).draw(graphics)?;
+        Text::with_baseline("Starting...", Point::new(20, 36), STYLE_TER_14, Baseline::Top).draw(graphics)?;
+
+        ctx.graphics.flush().map_err(|e| anyhow!("{e:?}"))?;
+
+        Ok(())
+    })
+}
+
+pub(crate) async fn worker<I2C>(ctx: &mut Box<Context<I2C>>) -> anyhow::Result<()>
+where
+    I2C: embedded_hal::i2c::I2c<Error = I2cError>,
+{
+    let mut interval = interval(Duration::from_secs(1));
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+    loop {
+        interval.tick().await;
+
+        if let Err(e) = draw(ctx).await {
+            error!("Failed to draw: {e:?}");
+        }
+    }
 }
 
 async fn draw<I2C>(ctx: &mut Context<I2C>) -> anyhow::Result<()>

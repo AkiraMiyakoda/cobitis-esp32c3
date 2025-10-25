@@ -20,6 +20,7 @@ mod nvs;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Initialize ESP32 and its peripherals
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
@@ -42,9 +43,16 @@ async fn main() -> anyhow::Result<()> {
     let i2c_display = Box::new(i2c_bus::RefCellDevice::new(&i2c));
     let i2c_adc = Box::new(i2c_bus::RefCellDevice::new(&i2c));
 
+    // Start workers
+    let mut display_ctx = display::init(*i2c_display)?;
+    display::greet(&mut display_ctx).await?;
+
+    let mut network_ctx = network::init(peripherals.modem, *event_loop)?;
+    let mut measurements_ctx = measurements::init(*one_wire_pin, *i2c_adc)?;
+
     select! {
-        result = display::worker(*i2c_display) => result,
-        result = network::worker(peripherals.modem, *event_loop) => result,
-        result = measurements::worker(*one_wire_pin, *i2c_adc) => result,
+        result = display::worker(&mut display_ctx) => result,
+        result = network::worker(&mut network_ctx) => result,
+        result = measurements::worker(&mut measurements_ctx) => result,
     }
 }
