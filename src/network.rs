@@ -68,13 +68,13 @@ impl From<SignalQuality> for i32 {
 impl SignalQuality {
     fn from_rssi(rssi: i32) -> Self {
         let rssi = (-rssi).clamp(0, 100);
-        if (0..50).contains(&rssi) {
+        if (0..=50).contains(&rssi) {
             Self::Excellent
-        } else if (51..60).contains(&rssi) {
+        } else if (51..=60).contains(&rssi) {
             Self::Good
-        } else if (61..70).contains(&rssi) {
+        } else if (61..=70).contains(&rssi) {
             Self::Fair
-        } else if (71..85).contains(&rssi) {
+        } else if (71..=85).contains(&rssi) {
             Self::Poor
         } else {
             Self::Unreliable
