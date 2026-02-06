@@ -26,7 +26,7 @@ experimental = ["esp-idf-svc/experimental"]
 
 [dependencies]
 ads1x1x = "0.3.0"
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 chrono = "0.4.43"
 chrono-tz = "0.10.4"
 ds18b20 = { git = "https://github.com/tsauvajon/ds18b20.git", branch = "master" }
