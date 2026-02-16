@@ -30,7 +30,7 @@ anyhow = "1.0.101"
 chrono = "0.4.43"
 chrono-tz = "0.10.4"
 ds18b20 = { git = "https://github.com/tsauvajon/ds18b20.git", branch = "master" }
-embedded-graphics = "0.8.1"
+embedded-graphics = "0.8.2"
 embedded-hal = "1.0.0"
 embedded-hal-bus = "0.3.0"
 embedded-svc = "0.28.1"
